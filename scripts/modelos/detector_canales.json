@@ -1,0 +1,22 @@
+{
+  "fecha": "2026-10-13 16:19",
+  "cajas": [
+    "01-02102026_canales_BF_cajas.zip",
+    "01-09102026_canales_BF_cajas.zip",
+    "02-02102026_canales_BF_cajas.zip",
+    "03-02102026_canales_BF_cajas.zip",
+    "03-25092026-stack_alineado_canales_BF_cajas.zip",
+    "04-02102026_canales_BF_cajas.zip",
+    "04-25092026-stack_alineado_canales_BF_cajas.zip",
+    "05-02102026_canales_BF_cajas.zip",
+    "06-02102026_canales_BF_cajas.zip",
+    "06-09102026_canales_BF_cajas.zip",
+    "08-09102026_canales_BF_cajas.zip",
+    "15-02102026_canales_BF_cajas.zip",
+    "17-09102026_canales_BF_cajas.zip",
+    "18-09102026_canales_BF_cajas.zip"
+  ],
+  "fotos": 4521,
+  "n_cajas": 16118,
+  "notas": "sin los canales de conjunto_prueba.csv; borradas x3; debajo de tu última caja = fondo x0.5; scikit-learn 1.7.2"
+}

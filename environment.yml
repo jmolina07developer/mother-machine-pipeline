@@ -1,0 +1,11 @@
+# conda / mamba environment for the mother machine pipeline
+#   conda env create -f environment.yml
+#   conda activate mothermachine
+name: mothermachine
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - -r requirements.txt

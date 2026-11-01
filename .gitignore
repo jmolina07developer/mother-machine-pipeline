@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Data and results: keep them out of the repository
+*.tif
+*.tiff
+*.zip
+*.npz
+*.xlsx
+Images/
+Stacks/

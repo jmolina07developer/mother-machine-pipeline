@@ -1,0 +1,17 @@
+{
+  "fecha": "2026-10-08 11:21",
+  "version_caracteristicas": 1,
+  "kimogramas": [
+    "01-02102026_kimo_BF_trazos.zip",
+    "02-02102026_kimo_BF_trazos.zip",
+    "03-02102026_kimo_BF_trazos.zip",
+    "03-25092026-stack_alineado_kimo_BF_trazos.zip",
+    "04-02102026_kimo_BF_trazos.zip",
+    "05-02102026_kimo_BF_trazos.zip",
+    "06-02102026_kimo_BF_trazos.zip",
+    "11-02102026_kimo_BF_trazos.zip",
+    "13-02102026_kimo_BF_trazos.zip"
+  ],
+  "canales": 187,
+  "pixeles": 782893
+}

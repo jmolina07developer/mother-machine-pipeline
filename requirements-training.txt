@@ -1,0 +1,4 @@
+# Only needed to retrain the neural network (centre-based detector) with new annotations.
+-r requirements.txt
+torch>=2.2
+onnx>=1.16
