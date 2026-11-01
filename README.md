@@ -94,6 +94,17 @@ requirements.txt         Python packages (requirements-training.txt adds PyTorch
 GNU General Public License v3.0 (see [LICENSE](LICENSE)): you may use, modify and redistribute the code;
 modified versions that you distribute must also be released under the GPL-3.0.
 
-## Author
+## Authorship and AI assistance
 
-Javier Molina. If you use this pipeline in your work, please cite this repository.
+The code, the trained models and this documentation were written by **Claude** (Anthropic's AI model), working
+with **Javier Molina**, who:
+
+- designed the experiments and provided the microscope images;
+- drew the hand annotations used to train and validate the cell detector;
+- decided what every step had to do;
+- checked the results against his own measurements.
+
+All the programs were tested on real experiments before release, but, as with any analysis software, check
+the outputs on your own data (see *Before trusting the numbers* above).
+
+If you use this pipeline in your work, please cite this repository.
