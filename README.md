@@ -62,6 +62,9 @@ python fluorescencia_linaje.py /path/to/MyExperiment/Stacks/*-BF.tif --fluo GFP
 
 See **[docs/usage.md](docs/usage.md)** for what each step expects and does, its options and how to
 check the results, and **[docs/outputs.md](docs/outputs.md)** for every output file and column.
+The algorithms behind each step (registration, the cell detector, the integer program used for tracking,
+the fluorescence measurement), their validation and the references they build on are described in
+**[docs/methods/methods.pdf](docs/methods/methods.pdf)** (LaTeX source and figures in the same folder).
 
 ## Before trusting the numbers
 
@@ -85,6 +88,7 @@ scripts/                 the programs (run them from this folder)
   modelos/                 trained models (neural network and tree-based detectors)
 fiji/Cajas_Canales.ijm   Fiji macro to review and annotate boxes
 docs/                    usage, outputs and training guides
+  methods/                 methods document (PDF, LaTeX source and figures)
 environment.yml          conda environment
 requirements.txt         Python packages (requirements-training.txt adds PyTorch, to retrain)
 ```
