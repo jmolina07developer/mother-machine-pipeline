@@ -40,7 +40,7 @@ time you type `git`; on Windows install it from <https://git-scm.com>):
 
 ```bash
 cd ~/Documents            # or wherever you want to keep it
-git clone https://github.com/<user>/mother-machine-pipeline.git
+git clone https://github.com/jmolina07developer/mother-machine-pipeline.git
 cd mother-machine-pipeline
 ```
 

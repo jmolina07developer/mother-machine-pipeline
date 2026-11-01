@@ -28,7 +28,7 @@ from the terminal. Each step skips what is already done, so an interrupted run c
 Short version (details, for macOS, Windows and Linux, in **[INSTALL.md](INSTALL.md)**):
 
 ```bash
-git clone https://github.com/<user>/mother-machine-pipeline.git
+git clone https://github.com/jmolina07developer/mother-machine-pipeline.git
 cd mother-machine-pipeline
 conda env create -f environment.yml        # or: python -m venv .venv  +  pip install -r requirements.txt
 conda activate mothermachine
