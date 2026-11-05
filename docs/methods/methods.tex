@@ -28,7 +28,7 @@
 
 \title{Automated detection, tracking and lineage reconstruction of \emph{E.~coli}\\ in mother-machine time-lapse images\\[4pt] \large Methods (working draft)}
 \author{}
-\date{Pipeline version of 1 November 2026\\[2pt] \small Code: \url{https://github.com/jmolina07developer/mother-machine-pipeline}}
+\date{Pipeline version of 5 November 2026\\[2pt] \small Code: \url{https://github.com/jmolina07developer/mother-machine-pipeline}}
 
 \begin{document}
 \maketitle
@@ -78,6 +78,7 @@ The pipeline (Fig.~\ref{fig:overview}) takes the raw bright-field images of each
 \item \emph{Shifted position numbers.} Every bright-field image is compared with a reference image (the middle of the movie) of its own position and of the two neighbouring positions. An image that matches a neighbour with $\mathrm{NCC}\ge0.85$ and at least $0.15$ better than its own position is moved there, together with its fluorescence image; if it matches neither, shifts of up to $\pm6$ positions are tried.
 \item \emph{Repeated bright-field images.} When two or more bright-field images of a position are less than \SI{60}{\second} apart, only one is kept: the one with a paired fluorescence image and, among those, the one that best matches the chip numbers of its position (on a tie, the first). An unpaired bright-field image right after a paired one is also discarded if it was taken less than half a frame interval later, or if it lies between two paired images and does not match the chip numbers of its position ($\mathrm{NCC}<0.5$; an image of another field).
 \item \emph{Two fields under one number.} In positions with bright field only, two near-simultaneous images whose chip numbers are displaced by more than \SI{25}{px} are two different fields of the chip saved under the same position number, and are split into two series.
+\item \emph{Images discarded by hand.} Images listed in a file (e.g.\ a frame of another field of the chip saved under a position) are removed from the inventory.
 \item \emph{Exposure changes.} If, for some images, the range between the 1st percentile and the median differs by more than \SI{10}{\percent} from its median over the stack (the exposure was changed during the movie), each such image is mapped linearly so that its 1st percentile and its median become the medians over the stack.
 \end{enumerate}
 Each bright-field stack is then converted to 8 bits by linear scaling between its \num{0.1} and \num{99.9} percentiles; fluorescence is kept at 16 bits (\S\ref{sec:fluo}).
@@ -86,7 +87,7 @@ Each bright-field stack is then converted to 8 bits by linear scaling between it
 \begin{equation}
 \mathrm{NCC}_t(\Delta y,\Delta x)=\frac{\sum_{i,j}\bigl(B_t(i+\Delta y,j+\Delta x)-\bar B_t\bigr)\bigl(T(i,j)-\bar T\bigr)}{\sqrt{\sum_{i,j}\bigl(B_t(i+\Delta y,j+\Delta x)-\bar B_t\bigr)^2\;\sum_{i,j}\bigl(T(i,j)-\bar T\bigr)^2}},\qquad |\Delta y|,|\Delta x|\le m,
 \end{equation}
-where $\bar B_t$ is the mean of the window under the template. The maximum value is reported as the registration quality (1 = perfect match). The reference is chosen among the slices at \SIlist{0;25;50;75}{\percent} of the movie as the one with the highest median quality against a sample of 12 slices; slices with quality $<0.8$ are re-registered through the other candidate references (composing the two displacements). Slices are shifted by an integer number of pixels (no interpolation). As an independent check, each registered slice is matched against the previous one with a $\pm\SI{15}{px}$ search; the residual displacement should be $0$--$\SI{1}{px}$, and larger residuals are reported (``doubtful alignment'').
+where $\bar B_t$ is the mean of the window under the template. The maximum value is reported as the registration quality (1 = perfect match). The reference is chosen among the slices at \SIlist{0;25;50;75}{\percent} of the movie as the one with the highest median quality against a sample of 12 slices; slices with quality $<0.8$ are re-registered through the other candidate references (composing the two displacements). Slices whose quality is still below $0.93$ are searched again over all displacements of up to \SI{500}{px} with a masked normalised cross-correlation computed in the Fourier domain~\cite{padfield2012} (overlap of at least \SI{35}{\percent} of the image; at half resolution, then refined by $\pm\SI{2}{px}$), and the new displacement is kept if it raises the quality by more than $0.02$. This recovers stage jumps of several hundred pixels, for which the restricted search locks onto a neighbouring block of the chip numbers, which repeat every $\approx\SI{200}{px}$ (quality $\approx0.7$--$0.86$ instead of $>0.95$). After such a jump part of the registered slice has no image (it is filled with the median grey); every channel--frame whose central half (\S\ref{sec:channels}) falls outside the real image is treated as a bad frame of that channel by the tracker and is not used for training. Slices are shifted by an integer number of pixels (no interpolation). As an independent check, each registered slice is matched against the previous one with a $\pm\SI{15}{px}$ search; the residual displacement should be $0$--$\SI{1}{px}$, and larger residuals are reported (``doubtful alignment'').
 
 %======================================================================
 \section{Channel detection and straightening}\label{sec:channels}
@@ -606,6 +607,7 @@ Python~3 with NumPy~\cite{harris2020}, SciPy~\cite{virtanen2020} (image filters,
 \bibitem{marr1980} D.~Marr, E.~Hildreth. Theory of edge detection. \emph{Proceedings of the Royal Society of London B} 207:187--217 (1980).
 \bibitem{lewis1995} J.~P.~Lewis. Fast normalized cross-correlation. \emph{Vision Interface}, 120--123 (1995).
 \bibitem{vanderwalt2014} S.~van~der~Walt, J.~L.~Sch\"onberger, J.~Nunez-Iglesias, F.~Boulogne, J.~D.~Warner, N.~Yager, E.~Gouillart, T.~Yu, and the scikit-image contributors. scikit-image: image processing in Python. \emph{PeerJ} 2:e453 (2014).
+\bibitem{padfield2012} D.~Padfield. Masked object registration in the Fourier domain. \emph{IEEE Transactions on Image Processing} 21:2706--2718 (2012).
 \bibitem{virtanen2020} P.~Virtanen, R.~Gommers, T.~E.~Oliphant, et al. SciPy~1.0: fundamental algorithms for scientific computing in Python. \emph{Nature Methods} 17:261--272 (2020).
 \bibitem{zhou2019} X.~Zhou, D.~Wang, P.~Kr\"ahenb\"uhl. Objects as points. \emph{arXiv:1904.07850} (2019).
 \bibitem{ronneberger2015} O.~Ronneberger, P.~Fischer, T.~Brox. U-Net: convolutional networks for biomedical image segmentation. \emph{MICCAI}, LNCS 9351, 234--241 (2015).

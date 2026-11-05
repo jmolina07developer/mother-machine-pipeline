@@ -73,6 +73,22 @@ It also checks that each image belongs to its position (if a round of positions 
 numbers, the images are moved to the right position; listed in `Stacks/areas_reasignadas.csv`). It
 discards duplicated bright-field images taken seconds apart, keeping the one that has the fluorescence.
 
+**Large stage jumps.** The normal search looks for shifts of up to `--margen` px. Slices that still match
+poorly (quality < 0.93) are searched again over all shifts of up to 500 px, so that a stage that moved by a
+few hundred pixels is aligned correctly instead of locking onto the neighbouring block of chip numbers
+(they repeat every ~200 px). After such a jump part of the aligned slice has no image (it is filled with
+grey); step 2 lists the channels and frames concerned and the tracking skips them.
+
+**Discarding images by hand.** To leave out images (e.g. a frame of another field of the chip saved under
+a position), list them in `Stacks/imagenes_descartadas.csv`:
+
+```
+archivo,motivo
+08_261103_160311_Regrowth_BF_00300_.tif,another field of the chip
+```
+
+and run step 1 again for those positions.
+
 **Check:** the printed line of each position. `calidad` (alignment quality, correlation with the
 reference, 1 = perfect) below 0.8, or `DOUBTFUL ALIGNMENT in slices …`, means you should look at the
 stack in Fiji.
@@ -96,6 +112,9 @@ It first runs `kimogramas.py` and then makes the straightened channels:
   image the Fiji macro works on.
 - It also writes `<pos>_canales_BF_geometria.csv`. Channels cut by the edge of the image are marked
   `al_borde` and not analysed.
+- `<pos>_canales_BF_sin_datos.csv` lists the channels and frames that fall outside the real image after a
+  large stage jump (grey in the straightened image). They are treated as bad frames of that channel: the
+  tracking skips them and they are not used for training.
 
 ### 3. Cells and lineage: `detectar_celulas.py predecir`
 

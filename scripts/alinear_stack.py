@@ -38,6 +38,9 @@ ZONA_NUMEROS = (0, 450)   # rows (y_ini, y_fin) where the chip numbers are. The 
                           # were lower down (Ily 13/10, positions 10 and 11: around row 300) and the
                           # alignment locked onto the camera's dust specks, which do not move
 MARGEN = 40               # maximum shift searched (px) in each direction
+Q_ANCHO = 0.93            # slices matching worse than this are also searched with large shifts
+SALTO_MAX = 500           # maximum shift (px) of that wide search
+SOLAPE_MIN = 0.35         # minimum fraction of the image that must overlap with the reference
 
 
 def _bordes(img):
@@ -53,6 +56,44 @@ def _desplazar(img, dy, dx, relleno):
     xs, xd = (slice(0, w - dx), slice(dx, w)) if dx >= 0 else (slice(-dx, w), slice(0, w + dx))
     out[yd, xd] = img[ys, xs]
     return out
+
+
+def _ncc_solape(A, M, dy, dx):
+    """Normalised correlation between A and M shifted by (dy, dx), only where they overlap, and the overlapping fraction."""
+    h, w = A.shape
+    ya, yb, xa, xb = max(0, dy), min(h, h + dy), max(0, dx), min(w, w + dx)
+    if yb - ya < 10 or xb - xa < 10:
+        return -1.0, 0.0
+    a = A[ya:yb, xa:xb]; m = M[ya - dy:yb - dy, xa - dx:xb - dx]
+    a = a - a.mean(); m = m - m.mean()
+    den = np.sqrt((a * a).sum() * (m * m).sum())
+    return (float((a * m).sum() / den) if den > 0 else -1.0), (yb - ya) * (xb - xa) / (h * w)
+
+
+def medir_ancho(A, M, salto_max=SALTO_MAX, solape_min=SOLAPE_MIN):
+    """
+    Shift (dy, dx) that brings M onto A, searching ALL shifts with an overlap of at least solape_min (masked
+    normalised cross-correlation in the Fourier domain, skimage), first at half resolution and then refined ±2 px.
+    It handles stage jumps larger than the normal search margin (Ily 03/11, positions 07–13: ~320 px before 13:00,
+    ~90 px vertically at 14:31 and 15:43), where the normal search locks onto the neighbouring block of numbers (the
+    numbers repeat every ~200 px). Returns (dy, dx, quality), quality = correlation in the overlapping area.
+    """
+    from skimage.registration import phase_cross_correlation
+    a, m = A[::2, ::2], M[::2, ::2]
+    s = phase_cross_correlation(a, m, reference_mask=np.ones(a.shape, bool), moving_mask=np.ones(m.shape, bool),
+                                overlap_ratio=solape_min)
+    s = s[0] if isinstance(s, tuple) else s
+    dy0, dx0 = int(round(2 * s[0])), int(round(2 * s[1]))
+    mejor = (-1.0, 0, 0)
+    for i in range(-2, 3):
+        for j in range(-2, 3):
+            q, f = _ncc_solape(A, M, dy0 + i, dx0 + j)
+            if f >= solape_min and q > mejor[0]:
+                mejor = (q, dy0 + i, dx0 + j)
+    q, dy, dx = mejor
+    if abs(dy) > salto_max or abs(dx) > salto_max:
+        return 0, 0, -1.0
+    return dy, dx, q
 
 
 def calcular_desplazamientos(stack, zona=ZONA_NUMEROS, margen=MARGEN, referencia='auto', calidad_min=0.8):
@@ -100,6 +141,15 @@ def calcular_desplazamientos(stack, zona=ZONA_NUMEROS, margen=MARGEN, referencia
             if q > res[i][2]:
                 res[i] = [dy + oy, dx + ox, q, k + 1]
 
+    # Large jumps: beyond the margin, or the search locked onto the neighbouring block of numbers (quality ~0.7–0.86
+    # instead of >0.95). All shifts are searched and the best match is kept.
+    for i in range(n):
+        if i == ref or res[i][2] >= Q_ANCHO:
+            continue
+        dy, dx, q = medir_ancho(B[ref], B[i])
+        if q > res[i][2] + 0.02:
+            res[i] = [dy, dx, q, ref + 1]
+
     tabla = pd.DataFrame(res, columns=['dy_px', 'dx_px', 'calidad', 'comparado_con'])
     tabla.insert(0, 'slice', np.arange(1, n + 1))
     tabla['salto_px'] = np.hypot(tabla.dy_px.diff(), tabla.dx_px.diff()).fillna(0)
@@ -132,7 +182,7 @@ def aplicar_desplazamientos(stack, tabla):
 
 
 def avisos(tabla, margen=MARGEN, calidad_min=0.8, nombre=''):
-    al_limite = tabla[(tabla.dy_px.abs() >= margen) | (tabla.dx_px.abs() >= margen)]
+    al_limite = tabla[((tabla.dy_px.abs() == margen) | (tabla.dx_px.abs() == margen)) & (tabla.calidad < Q_ANCHO)]
     if not al_limite.empty:
         warnings.warn(f'{nombre} slices {al_limite.slice.tolist()}: the shift reaches the search margin '
                       f'({margen} px); it may be larger. Try a larger margin.')

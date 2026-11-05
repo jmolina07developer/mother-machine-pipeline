@@ -572,12 +572,29 @@ def _generar_posicion_varias(carpeta, inv_pos, salida, alinear, zona, margen, bf
     return resumen
 
 
+def quitar_descartadas(inv, salida):
+    """
+    Removes from the inventory the images listed in <salida>/imagenes_descartadas.csv (column `archivo`; `motivo`
+    optional), written by hand: e.g. images of another field of the chip saved under a position (Ily 03/11: position
+    08 at 16:03 and 16:31, position 20 at 14:40), which do not match the numbers of their position.
+    """
+    f = Path(salida) / 'imagenes_descartadas.csv'
+    if not f.exists():
+        return inv
+    fuera = set(pd.read_csv(f).archivo.astype(str))
+    n = inv.archivo.isin(fuera).sum()
+    if n:
+        print(f'{n} images discarded by hand ({f.name})')
+    return inv[~inv.archivo.isin(fuera)].reset_index(drop=True)
+
+
 def generar_stacks(carpeta, salida=None, posiciones=None, alinear=True,
                    zona=ZONA_NUMEROS, margen=MARGEN_STACKS, bf_8bits=True, solo_bf=None, fluo='PI', corregir=True):
     carpeta = Path(carpeta)
     salida = Path(salida) if salida else carpeta.parent / 'Stacks'
     fluos = [fluo] if isinstance(fluo, str) else list(fluo)
     inv, umbral = inventario(carpeta, fluos)
+    inv = quitar_descartadas(inv, salida)
     if corregir:                                         # images saved with a shifted area number
         inv, _ = corregir_areas(carpeta, inv, salida)
     if solo_bf is None:

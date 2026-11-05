@@ -76,7 +76,8 @@ Needed only if the detector fails on many frames of a new kind of image. Install
 2. **Gather the training data.** Put in one folder, for every annotated position:
    - `<base>_canales_BF_cajas.zip`;
    - `<base>_canales_BF.tif` and `<base>_canales_BF_geometria.csv`;
-   - if they exist, `<base>_canales_BF_borradas.txt` and the folder's `fotos_validas.csv`.
+   - if they exist, `<base>_canales_BF_borradas.txt`, `<base>_canales_BF_sin_datos.csv` and the folder's
+     `fotos_validas.csv`.
 
    Keep some channels out as a test set by listing them in `conjunto_prueba.csv` (`imagen,canal`) in
    that folder. Then build the data file:

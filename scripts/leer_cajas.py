@@ -106,7 +106,11 @@ def fotos_malas(ruta_zip):
             if img and not img.startswith(base_img): continue
             if m := PATRON_MALA.match(roi.name or ''):
                 filas.append(dict(canal=int(m.group(1)), foto=int(m.group(2))))
-    return pd.DataFrame(filas, columns=['canal', 'foto'])
+    sd = ruta_zip.with_name(base_img + '_sin_datos.csv')      # channel-frames without image (canales_enderezados.py)
+    if sd.exists():
+        t = pd.read_csv(sd)
+        filas += [dict(canal=int(c), foto=int(f)) for c, f in zip(t.canal, t.foto)]
+    return pd.DataFrame(filas, columns=['canal', 'foto']).drop_duplicates()
 
 
 def leer_borradas(ruta_zip):

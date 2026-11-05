@@ -33,6 +33,7 @@ stacks and kymographs.
 | `<base>_registro.csv` | one row per slice (below) |
 | `resumen_stacks.csv` | one row per position: slices, unpaired / discarded images, alignment range and quality |
 | `areas_comprobacion.csv`, `areas_reasignadas.csv` | match of every image with the chip numbers of its position and the images moved to another position |
+| `imagenes_descartadas.csv` | optional, written by you: images to leave out (`archivo, motivo`) |
 
 `_registro.csv`:
 
@@ -73,6 +74,7 @@ stacks and kymographs.
 | `_detector_cajas.csv`, `_detector_madre_hija.csv`, `_detector_ciclos.csv`, `_detector_divisiones.csv` | intermediate results of the mother/daughter tracking (diagnostics) |
 | `<base>_canales_BF_cajas.zip` | **your** boxes and marks, written by the Fiji macro (ROI names `C05_f023_c02` = box 2 of channel 5 in frame 23; `_VACIA` = empty; `_MALA` = bad frame) |
 | `<base>_canales_BF_borradas.txt` | proposals you deleted in the macro (there is no cell there; used for training) |
+| `<base>_canales_BF_sin_datos.csv` | `canal, foto`: channel-frames outside the real image after a large stage jump (treated as bad frames) |
 | `fotos_validas.csv` | optional, written by you: last usable frame of each image (`imagen, ultima_foto, motivo`) |
 | `conjunto_prueba.csv` | optional: channels kept out of training as a test set (`imagen, canal`) |
 

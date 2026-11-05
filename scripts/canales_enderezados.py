@@ -47,6 +47,39 @@ def recortes(stack, canal, ancho, margen_sup, largo):
                      for img in stack])
 
 
+def fotos_sin_datos(ruta_stack, canales, margen_sup, ancho, forma):
+    """
+    (channel, frame) pairs in which the channel falls, wholly or partly, outside the real image of that frame: after
+    a large stage jump the aligned slice is shifted and the empty part is filled with grey (Ily 03/11, positions
+    07–13: a third of the field had no image until 13:00). Those frames are treated as bad frames in that channel (the
+    tracking skips them; see leer_cajas.fotos_malas). Uses the shifts in <base>_registro.csv; without that file
+    nothing is marked. A channel outside the image in every frame is not marked (an edge channel, as before).
+    """
+    base = Path(ruta_stack).stem.replace('-BF', '')
+    reg = Path(ruta_stack).parent / f'{base}_registro.csv'
+    if not reg.exists():
+        return pd.DataFrame(columns=['canal', 'foto'])
+    r = pd.read_csv(reg)
+    if not {'slice', 'dy_px', 'dx_px'} <= set(r.columns):
+        return pd.DataFrame(columns=['canal', 'foto'])
+    H, W = forma
+    filas = []
+    for _, c in canales.iterrows():
+        p0 = np.array([c.x_sup, c.y_sup]); p1 = np.array([c.x_inf, c.y_inf])
+        u = (p1 - p0) / np.linalg.norm(p1 - p0); n = np.array([-u[1], u[0]])
+        esquinas = np.array([p0 + s * u + w * n for s in (-margen_sup, float(c.fila_salida) - margen_sup)
+                             for w in (-ancho / 4, ancho / 4)])          # the central half (the cells, not the walls)
+        for t in r.itertuples():
+            dy, dx = int(t.dy_px), int(t.dx_px)
+            x0, x1, y0, y1 = max(0, dx), W + min(0, dx), max(0, dy), H + min(0, dy)
+            dentro = (esquinas[:, 0] >= x0) & (esquinas[:, 0] <= x1 - 1) & (esquinas[:, 1] >= y0) & (esquinas[:, 1] <= y1 - 1)
+            if not dentro.all():
+                filas.append(dict(canal=int(c.canal), foto=int(t.slice)))
+    sd = pd.DataFrame(filas, columns=['canal', 'foto'])
+    n = sd.groupby('canal').size()
+    return sd[~sd.canal.isin(n.index[n >= len(r)])]
+
+
 def _a_8bits(R):
     """Each frame normalised to its own median (removes the flicker between frames) and converted to 8 bits."""
     R = R / (np.median(R, axis=(1, 2), keepdims=True) + 1e-6)
@@ -119,7 +152,11 @@ def canales_enderezados(ruta_stack):
     geo['stack'] = ruta_stack.name
     geo.to_csv(salida / f'{base}_canales_BF_geometria.csv', index=False)
     escribir_txt_macro(geo, salida / f'{base}_canales_BF_macro.txt')
-    print(f'{destino.name}: {len(canales)} channels × {T} frames (each frame {ancho} × {largo} px)')
+    usados = canales[~canales['al_borde'].astype(bool)] if 'al_borde' in canales else canales
+    sd = fotos_sin_datos(ruta_stack, usados, margen, ancho, st.shape[1:])
+    sd.to_csv(salida / f'{base}_canales_BF_sin_datos.csv', index=False)
+    print(f'{destino.name}: {len(canales)} channels × {T} frames (each frame {ancho} × {largo} px)'
+          + (f'; {len(sd)} channel-frames outside the image after a stage jump (skipped)' if len(sd) else ''))
     return destino
 
 

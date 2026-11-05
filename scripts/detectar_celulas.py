@@ -859,7 +859,7 @@ def lista_revision(ruta_img, n=20, frac_azar=0.15, semilla=0):
     cp = Path(str(ruta_img.with_suffix('')) + '_crecimiento_posicion.csv')
     mu = pd.read_csv(cp).tasa_esperada_por_min.values[:T] if cp.exists() else None
     zp = ruta_img.with_name(ruta_img.stem + '_cajas.zip')
-    malas = fotos_malas(zp) if zp.exists() else []
+    malas = fotos_malas(zp)
     anotadas = set()
     if zp.exists():
         _, _, anot = leer_cajas(zp)
