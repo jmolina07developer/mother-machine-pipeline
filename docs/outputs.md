@@ -43,6 +43,7 @@ stacks and kymographs.
 | `archivo_BF`, `archivo_<FLUO>` | source files (`archivo_PI` when there is a single fluorescence channel) |
 | `dt_BF_<FLUO>_s` | seconds between the bright-field image and its fluorescence image |
 | `q_area` | correlation of the image with the chip numbers of its position |
+| `giro_grados` | rotation of the slice relative to the median orientation of the stack (corrected if ≥ 0.1°) |
 | `dy_px`, `dx_px` | shift applied to align the slice |
 | `calidad` | alignment quality (correlation with the reference, 1 = perfect; < 0.8: check) |
 | `comparado_con`, `salto_px` | reference slice and size of the shift relative to the previous slice |

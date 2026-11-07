@@ -67,7 +67,8 @@ from skimage.filters import threshold_otsu
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from alinear_stack import (ZONA_NUMEROS, aplicar_desplazamientos,  # noqa: E402
-                           avisos, calcular_desplazamientos, comprobar_alineacion)
+                           avisos, calcular_desplazamientos, comprobar_alineacion,
+                           medir_giros, aplicar_giros, GIRO_MIN)
 
 PATRON = re.compile(r'^(\d+)_(\d{6})_(\d{6})_.*\.tiff?$')
 MAX_SEGUNDOS = 60      # maximum time gap between a bright-field image and its PI image
@@ -465,6 +466,9 @@ def generar_posicion(carpeta, inv_pos, salida, alinear=True, zona=ZONA_NUMEROS, 
     registro = pares.copy()
     registro.insert(0, 'slice', np.arange(1, len(pares) + 1))
     if alinear:
+        giros = medir_giros(bf)                                  # rotated chip: straightened before shifting
+        bf = aplicar_giros(bf, giros); pi = aplicar_giros(pi, giros)
+        registro['giro_grados'] = giros
         desp = calcular_desplazamientos(bf, zona, margen)
         bf = aplicar_desplazamientos(bf, desp)
         pi = aplicar_desplazamientos(pi, desp)
@@ -496,7 +500,7 @@ def generar_posicion(carpeta, inv_pos, salida, alinear=True, zona=ZONA_NUMEROS, 
     if alinear:
         resumen.update(slice_referencia=desp.attrs['slice_referencia'],
                        slices_revisar=' '.join(map(str, sorted(set(registro.slice[registro.calidad < 0.8]) | set(dudosos)))),
-                       residuo_max_px=float(registro.residuo_px.max()),
+                       residuo_max_px=float(registro.residuo_px.max()), giro_max=float(registro.giro_grados.abs().max()),
                        dx_min=registro.dx_px.min(), dx_max=registro.dx_px.max(),
                        dy_min=registro.dy_px.min(), dy_max=registro.dy_px.max(),
                        calidad_min=round(registro.calidad.min(), 3))
@@ -534,6 +538,10 @@ def _generar_posicion_varias(carpeta, inv_pos, salida, alinear, zona, margen, bf
     registro = pares.copy(); registro.insert(0, 'slice', np.arange(1, len(pares) + 1))
     dudosos = []
     if alinear:
+        giros = medir_giros(bf)
+        bf = aplicar_giros(bf, giros)
+        for f in fluos: fl[f] = aplicar_giros(fl[f], giros)
+        registro['giro_grados'] = giros
         desp = calcular_desplazamientos(bf, zona, margen)
         bf = aplicar_desplazamientos(bf, desp)
         for f in fluos: fl[f] = aplicar_desplazamientos(fl[f], desp)
@@ -559,13 +567,13 @@ def _generar_posicion_varias(carpeta, inv_pos, salida, alinear, zona, margen, bf
     if alinear:
         resumen.update(slice_referencia=desp.attrs['slice_referencia'],
                        slices_revisar=' '.join(map(str, sorted(set(registro.slice[registro.calidad < 0.8]) | set(dudosos)))),
-                       residuo_max_px=float(registro.residuo_px.max()), dx_min=registro.dx_px.min(), dx_max=registro.dx_px.max(),
+                       residuo_max_px=float(registro.residuo_px.max()), giro_max=float(registro.giro_grados.abs().max()), dx_min=registro.dx_px.min(), dx_max=registro.dx_px.max(),
                        dy_min=registro.dy_px.min(), dy_max=registro.dy_px.max(), calidad_min=round(registro.calidad.min(), 3))
     msg = f'{base}: {len(registro)} slices | ' + ', '.join(f'{f} in {resumen[f"con_{f}"]}' for f in fluos)
     if sobrantes: msg += f' | unpaired fluorescence images discarded: {sobrantes}'
     if bf_repetidos: msg += f' | repeated BF images discarded: {bf_repetidos}'
     if alinear:
-        msg += (f' | dx {resumen["dx_min"]}..{resumen["dx_max"]}, dy {resumen["dy_min"]}..{resumen["dy_max"]} px,'
+        msg += (f' | max rotation {resumen["giro_max"]:.2f}° | dx {resumen["dx_min"]}..{resumen["dx_max"]}, dy {resumen["dy_min"]}..{resumen["dy_max"]} px,'
                 f' min quality {resumen["calidad_min"]} | max residual {resumen["residuo_max_px"]:.0f} px')
         if dudosos: msg += f' | DOUBTFUL ALIGNMENT in slices {dudosos} (check them)'
     print(msg, flush=True)

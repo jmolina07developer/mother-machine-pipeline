@@ -39,8 +39,11 @@ ZONA_NUMEROS = (0, 450)   # rows (y_ini, y_fin) where the chip numbers are. The 
                           # alignment locked onto the camera's dust specks, which do not move
 MARGEN = 40               # maximum shift searched (px) in each direction
 Q_ANCHO = 0.93            # slices matching worse than this are also searched with large shifts
+Q_ANCHO_MIN = 0.80        # and it is only accepted if it matches at least this well (blurry images give false wide matches)
 SALTO_MAX = 500           # maximum shift (px) of that wide search
 SOLAPE_MIN = 0.35         # minimum fraction of the image that must overlap with the reference
+GIRO_MAX = 5.0            # maximum rotation corrected (degrees); above it the measurement is taken as wrong
+GIRO_MIN = 0.1            # smaller rotations are not corrected (< 2 px over 1000 px)
 
 
 def _bordes(img):
@@ -96,6 +99,48 @@ def medir_ancho(A, M, salto_max=SALTO_MAX, solape_min=SOLAPE_MIN):
     return dy, dx, q
 
 
+def _espectro_polar(img, n_ang=3600):
+    from skimage.filters import window
+    from skimage.transform import warp_polar
+    a = difference_of_gaussians(img.astype(float), 1, 20)
+    h, w = a.shape; n = min(h, w)
+    a = a[(h - n) // 2:(h - n) // 2 + n, (w - n) // 2:(w - n) // 2 + n] * window('hann', (n, n))
+    F = np.log1p(np.abs(np.fft.fftshift(np.fft.fft2(a))))
+    return warp_polar(F, radius=n // 2, output_shape=(n_ang, n // 2), scaling='linear')[:, n // 16:n // 3]
+
+
+def medir_giros(stack, n_ang=3600):
+    """
+    Rotation (degrees) of each slice relative to the median orientation of the stack. The modulus of the Fourier
+    transform does not change when the image is shifted and rotates with it, so the rotation is the angular shift
+    between the spectra in polar coordinates (phase correlation; Reddy and Chatterji 1996). The channels of the chip
+    give a spectrum with very marked lines, so the precision is ~0.02°. November 6: the orientation changes in steps
+    (−1.2°, −1.0°, 0°, +0.8°, +1.3°) each time the chip is repositioned. A rotation larger than GIRO_MAX is taken as 0.
+    """
+    from skimage.registration import phase_cross_correlation
+    P = [_espectro_polar(img, n_ang) for img in stack]
+    ref = P[len(P) // 2]
+    g = np.array([phase_cross_correlation(ref, p, upsample_factor=20, normalization=None)[0][0] * 360 / n_ang for p in P])
+    g = g - np.median(g)
+    g[np.abs(g) > GIRO_MAX] = 0.0
+    return np.round(g, 2)
+
+
+def aplicar_giros(stack, giros):
+    """Rotates each slice back by its rotation (bilinear interpolation; only if |rotation| >= GIRO_MIN).
+    The corners left empty are filled with the median of the slice."""
+    from scipy.ndimage import rotate
+    out = stack.copy()
+    for i, gi in enumerate(giros):
+        if abs(gi) < GIRO_MIN or not stack[i].any():
+            continue
+        r = rotate(stack[i].astype(np.float32), -gi, reshape=False, order=1, mode='constant', cval=float(np.median(stack[i])))
+        if np.issubdtype(stack.dtype, np.integer):
+            info = np.iinfo(stack.dtype); r = np.clip(np.round(r), info.min, info.max)
+        out[i] = r.astype(stack.dtype)
+    return out
+
+
 def calcular_desplazamientos(stack, zona=ZONA_NUMEROS, margen=MARGEN, referencia='auto', calidad_min=0.8):
     """
     Shift (dy, dx) of each slice relative to a reference slice, searching each one
@@ -147,7 +192,7 @@ def calcular_desplazamientos(stack, zona=ZONA_NUMEROS, margen=MARGEN, referencia
         if i == ref or res[i][2] >= Q_ANCHO:
             continue
         dy, dx, q = medir_ancho(B[ref], B[i])
-        if q > res[i][2] + 0.02:
+        if q > res[i][2] + 0.02 and q >= Q_ANCHO_MIN:
             res[i] = [dy, dx, q, ref + 1]
 
     tabla = pd.DataFrame(res, columns=['dy_px', 'dx_px', 'calidad', 'comparado_con'])

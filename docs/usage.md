@@ -73,6 +73,11 @@ It also checks that each image belongs to its position (if a round of positions 
 numbers, the images are moved to the right position; listed in `Stacks/areas_reasignadas.csv`). It
 discards duplicated bright-field images taken seconds apart, keeping the one that has the fluorescence.
 
+**Rotated chip.** Before aligning, the rotation of every slice relative to the median orientation of the
+stack is measured (from the Fourier spectrum, which the periodic channels make very precise, ~0.02°) and
+slices rotated by more than 0.1° are rotated back (column `giro_grados` of `_registro.csv`). This happens
+when the chip is repositioned during the experiment.
+
 **Large stage jumps.** The normal search looks for shifts of up to `--margen` px. Slices that still match
 poorly (quality < 0.93) are searched again over all shifts of up to 500 px, so that a stage that moved by a
 few hundred pixels is aligned correctly instead of locking onto the neighbouring block of chip numbers
