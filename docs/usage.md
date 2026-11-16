@@ -94,6 +94,11 @@ archivo,motivo
 
 and run step 1 again for those positions.
 
+**Setting the channel of the images by hand.** When two fluorescences are equally bright (e.g. GFP and PI),
+the classification by brightness fails. Write `Stacks/canal_imagenes.csv` with the channel of each image
+(`archivo,canal`, with `canal` = `BF` or the name of a fluorescence); images not listed keep the channel
+given by their brightness. The graphical interface writes it from the times of the rounds (tab 1).
+
 **Check:** the printed line of each position. `calidad` (alignment quality, correlation with the
 reference, 1 = perfect) below 0.8, or `DOUBTFUL ALIGNMENT in slices …`, means you should look at the
 stack in Fiji.

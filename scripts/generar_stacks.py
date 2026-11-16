@@ -580,6 +580,25 @@ def _generar_posicion_varias(carpeta, inv_pos, salida, alinear, zona, margen, bf
     return resumen
 
 
+def aplicar_canales(inv, salida):
+    """
+    Channel of each image set by hand: <salida>/canal_imagenes.csv (columns `archivo`, `canal` = BF or the name of a
+    fluorescence, e.g. GFP or PI), written by the interface or by hand. It replaces the classification by brightness,
+    which fails when two fluorescences are equally bright (November/6: GFP and PI told apart by the time of the PI
+    rounds). Images not listed keep the channel given by their brightness.
+    """
+    f = Path(salida) / 'canal_imagenes.csv'
+    if not f.exists():
+        return inv
+    t = pd.read_csv(f, dtype=str)
+    canal = dict(zip(t.archivo, t.canal.str.strip()))
+    n = inv.archivo.isin(canal).sum()
+    inv = inv.copy()
+    inv['canal'] = [canal.get(a, c) for a, c in zip(inv.archivo, inv.canal)]
+    print(f'Channel of {n} images set by hand ({f.name}): ' + ', '.join(f'{c} {k}' for c, k in inv.canal.value_counts().items()))
+    return inv
+
+
 def quitar_descartadas(inv, salida):
     """
     Removes from the inventory the images listed in <salida>/imagenes_descartadas.csv (column `archivo`; `motivo`
@@ -602,6 +621,7 @@ def generar_stacks(carpeta, salida=None, posiciones=None, alinear=True,
     salida = Path(salida) if salida else carpeta.parent / 'Stacks'
     fluos = [fluo] if isinstance(fluo, str) else list(fluo)
     inv, umbral = inventario(carpeta, fluos)
+    inv = aplicar_canales(inv, salida)
     inv = quitar_descartadas(inv, salida)
     if corregir:                                         # images saved with a shifted area number
         inv, _ = corregir_areas(carpeta, inv, salida)

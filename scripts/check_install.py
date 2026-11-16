@@ -18,7 +18,7 @@ sys.path.insert(0, str(HERE))
 # versions with which the pipeline has been tested (requirements.txt)
 TESTED = {'numpy': '2.2.6', 'pandas': '2.3.3', 'scipy': '1.15.3', 'skimage': '0.25.2', 'sklearn': '1.7.2',
           'tifffile': '2025.5.10', 'roifile': '2025.12.12', 'onnxruntime': '1.23.2', 'PIL': '12.3.0',
-          'joblib': '1.6.0', 'openpyxl': '3.1.5', 'matplotlib': '3.10.9'}
+          'joblib': '1.6.0', 'openpyxl': '3.1.5', 'matplotlib': '3.10.9', 'streamlit': '1.65.0'}
 PIP_NAME = {'skimage': 'scikit-image', 'sklearn': 'scikit-learn', 'PIL': 'pillow'}
 problems, warnings_ = [], []
 

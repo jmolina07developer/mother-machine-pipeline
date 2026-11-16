@@ -25,7 +25,12 @@ from the terminal. Each step skips what is already done, so an interrupted run c
 
 ## Installation
 
-Short version (details, for macOS, Windows and Linux, in **[INSTALL.md](INSTALL.md)**):
+**Without programming:** download the ZIP (**Code › Download ZIP**), unzip it and double-click
+`install_windows.bat` (Windows) or `install_mac.command` (macOS). It installs everything, and then
+`start_windows.bat` / `start_mac.command` opens a **graphical interface** in the web browser
+(see **[docs/gui.md](docs/gui.md)**).
+
+**From the terminal:** short version (details, for macOS, Windows and Linux, in **[INSTALL.md](INSTALL.md)**):
 
 ```bash
 git clone https://github.com/jmolina07developer/mother-machine-pipeline.git
@@ -85,9 +90,13 @@ so that existing analyses keep working; [docs/outputs.md](docs/outputs.md) trans
 scripts/                 the programs (run them from this folder)
   pipeline_completo.ipynb  the whole pipeline in a notebook
   check_install.py         checks the installation
+  interfaz.py              graphical interface (streamlit; see docs/gui.md)
+  ejecutar_pipeline.py     runs the whole pipeline from a settings file (used by the interface)
   modelos/                 trained models (neural network and tree-based detectors)
 fiji/Cajas_Canales.ijm   Fiji macro to review and annotate boxes
-docs/                    usage, outputs and training guides
+docs/                    usage, outputs, training and graphical interface guides
+install_windows.bat, start_windows.bat     install / open the interface on Windows (double-click)
+install_mac.command, start_mac.command     install / open the interface on macOS
   methods/                 methods document (PDF, LaTeX source and figures)
 environment.yml          conda environment
 requirements.txt         Python packages (requirements-training.txt adds PyTorch, to retrain)

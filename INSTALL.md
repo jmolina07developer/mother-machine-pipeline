@@ -13,6 +13,11 @@ computer. A plain-Python alternative is given in step 3b.
 
 Tested with Python 3.10, 3.11 and 3.12 and the package versions in `requirements.txt`.
 
+> **Quick installation without the terminal.** Download the ZIP of the repository, unzip it and double-click
+> `install_windows.bat` (Windows) or `install_mac.command` (macOS). It installs Miniforge if needed, creates
+> the environment and checks it; then `start_windows.bat` / `start_mac.command` opens the graphical interface.
+> See [docs/gui.md](docs/gui.md). The steps below do the same by hand.
+
 ---
 
 ## 1. Install Miniforge (once per computer)

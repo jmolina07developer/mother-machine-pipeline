@@ -14,3 +14,5 @@ openpyxl==3.1.5
 matplotlib==3.10.9
 # to use the notebook pipeline_completo.ipynb
 jupyterlab>=4.0
+# graphical interface (interfaz.py)
+streamlit==1.65.0

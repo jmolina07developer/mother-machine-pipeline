@@ -33,7 +33,9 @@ stacks and kymographs.
 | `<base>_registro.csv` | one row per slice (below) |
 | `resumen_stacks.csv` | one row per position: slices, unpaired / discarded images, alignment range and quality |
 | `areas_comprobacion.csv`, `areas_reasignadas.csv` | match of every image with the chip numbers of its position and the images moved to another position |
-| `imagenes_descartadas.csv` | optional, written by you: images to leave out (`archivo, motivo`) |
+| `imagenes_descartadas.csv` | optional, written by you or the interface: images to leave out (`archivo, motivo`) |
+| `canal_imagenes.csv` | optional, written by you or the interface: channel of each image (`archivo, canal`) |
+| `interfaz/` | settings, progress and messages of the graphical interface (see [gui.md](gui.md)) |
 
 `_registro.csv`:
 

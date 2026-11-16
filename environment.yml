@@ -4,6 +4,7 @@
 name: mothermachine
 channels:
   - conda-forge
+  - nodefaults        # only conda-forge (no terms of service to accept for the Anaconda channels)
 dependencies:
   - python=3.12
   - pip
