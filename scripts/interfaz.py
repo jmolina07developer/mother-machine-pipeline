@@ -128,10 +128,42 @@ def n_paginas(ruta):
         return len(tf.pages)
 
 
-@st.cache_data(show_spinner=False)
-def inventario(carpeta, clave, fluos):
-    inv, umbral = GS.inventario(Path(carpeta), list(fluos))
+def inventario(imagenes, stacks, fluos):
+    """Inventory of the images (GS.inventario). The brightness of each image is kept in
+    Stacks/interfaz/medianas.csv, so the images are read only the first time (with a progress bar)."""
+    f = stacks / 'interfaz' / 'medianas.csv'
+    med = {}
+    if f.exists():
+        try:
+            t = pd.read_csv(f, dtype={'archivo': str}); med = dict(zip(t.archivo, t.mediana))
+        except Exception:
+            med = {}
+    nuevas = [x for x in os.listdir(imagenes) if GS.PATRON.match(x) and x not in med]
+    barra = st.progress(0.0, text='Reading the images…') if len(nuevas) > 50 else None
+
+    def prog(i, n):
+        if barra is not None:
+            barra.progress(min(i / max(n, 1), 1.0), text=f'Reading the images (only the first time): {i} of {n}')
+    inv, umbral = GS.inventario(imagenes, list(fluos), progreso=prog, medianas=med)
+    if barra is not None:
+        barra.empty()
+    if nuevas:
+        try:
+            f.parent.mkdir(parents=True, exist_ok=True); inv[['archivo', 'mediana']].to_csv(f, index=False)
+        except Exception:
+            pass
     return inv, umbral
+
+
+def posiciones_de(imagenes):
+    """Positions from the file names only (fast)."""
+    return sorted({m.group(1) for x in os.listdir(imagenes) if (m := GS.PATRON.match(x))})
+
+
+def fluorescencias_de(fila):
+    """Fluorescence files that belong to a row of _registro.csv (columns archivo_<FLUO>)."""
+    return [str(v) for k, v in fila.items() if k.startswith('archivo_') and k != 'archivo_BF'
+            and isinstance(v, str) and v and not v.startswith('SIN_')]
 
 
 def clave_carpeta(carpeta):
@@ -226,19 +258,21 @@ st.sidebar.subheader('Fluorescence')
 solo_bf = st.sidebar.checkbox('Bright field only (no fluorescence images)', value=aj.get('solo_bf', False))
 fluo_txt = st.sidebar.text_input('Fluorescence names, from the brightest to the dimmest', value=aj.get('fluo', 'PI'),
                                  disabled=solo_bf, help='e.g. "PI", or "GFP, PI" when there are two. They are told '
-                                 'apart by brightness, or by time in the tab Images if they are equally bright.')
+                                 'apart by brightness, or by time in 1 · Images if they are equally bright.')
 FLUOS = [f.strip() for f in fluo_txt.replace(';', ',').split(',') if f.strip()] or ['PI']
 if aj.get('fluo') != fluo_txt or aj.get('solo_bf') != solo_bf:
     aj.update(fluo=fluo_txt, solo_bf=solo_bf); escribir_json(AJUSTES, aj)
 
-tab_img, tab_run, tab_ali, tab_res, tab_ayuda = st.tabs(['1 · Images', '2 · Run', '3 · Check alignment', '4 · Results', 'Help'])
+st.sidebar.divider()
+PAGINAS = ['1 · Images', '2 · Run', '3 · Check alignment', '4 · Results', 'Help']
+PAGINA = st.sidebar.radio('Go to', PAGINAS, key='pagina')
 
 # ---------------------------------------------------------------------------------------------- 1. images
-with tab_img:
+if PAGINA == '1 · Images':
     st.header('Images of the experiment')
-    with st.spinner('Reading the images (the first time takes ~1 s per 100 images)…'):
+    with st.spinner('Loading…'):
         try:
-            inv, umbral = inventario(str(IMAGENES), clave_carpeta(IMAGENES), tuple(FLUOS))
+            inv, umbral = inventario(IMAGENES, STACKS, tuple(FLUOS))
         except FileNotFoundError:
             inv = pd.DataFrame()
     todas = sorted(p.name for p in IMAGENES.glob('*.tif*'))
@@ -377,12 +411,12 @@ with tab_img:
             st.rerun()
 
 # ---------------------------------------------------------------------------------------------- 2. run
-with tab_run:
+if PAGINA == '2 · Run':
     st.header('Run the pipeline')
     proc = leer_json(INTERFAZ / 'proceso.json', {})
     estado = leer_json(INTERFAZ / 'estado.json', {})
     activo = vivo(proc.get('pid')) and estado.get('estado', 'en marcha') == 'en marcha'
-    posiciones = sorted(inv.pos.unique())
+    posiciones = posiciones_de(IMAGENES)
     c1, c2 = st.columns([2, 1])
     with c1:
         sel = st.multiselect('Positions (empty = all)', posiciones, default=aj.get('posiciones', []), disabled=activo)
@@ -429,7 +463,7 @@ with tab_run:
                                  stdout=log, stderr=subprocess.STDOUT, cwd=str(SCRIPTS), env=env, **kw)
             escribir_json(INTERFAZ / 'proceso.json', dict(pid=p.pid, inicio=time.time()))
             escribir_json(INTERFAZ / 'estado.json', dict(estado='en marcha', inicio=time.time(), nombre_paso='Starting…'))
-            time.sleep(1); st.rerun()
+            st.toast('Started'); time.sleep(1); st.rerun()
     if b2.button('⏸ Stop after this position', disabled=not activo, width='stretch'):
         (INTERFAZ / 'parar').write_text('stop'); st.toast('It will stop when the current position is finished.')
     if b3.button('⏹ Stop now', disabled=not activo, width='stretch'):
@@ -456,10 +490,11 @@ with tab_run:
         t = (e.get('fin') or time.time()) - e.get('inicio', time.time())
         if en_marcha:
             n, i = e.get('n') or 0, e.get('i') or 0
-            txt = f"**{e.get('nombre_paso', '')}**" + (f" — position {e.get('pos')} ({i + 1} of {n})" if n else '')
+            txt = f"**{e.get('nombre_paso', '')}**" + ((f" — position {e.get('pos')} ({i + 1} of {n})" if e.get('pos')
+                                                          else f' — {i} of {n}') if n else '')
             st.progress(min(i / n, 1.0) if n else 0.0, text=f'{txt} · {int(t // 60)} min {int(t % 60)} s')
         elif e.get('estado') == 'terminado':
-            st.success(f'Finished in {int(t // 60)} min {int(t % 60)} s. See the tabs **3 · Check alignment** and **4 · Results**.')
+            st.success(f'Finished in {int(t // 60)} min {int(t % 60)} s. See **3 · Check alignment** and **4 · Results** (panel on the left).')
         elif e.get('estado') == 'parado':
             st.warning('Stopped. Press Start to continue: the steps already done are skipped.')
         elif e.get('estado') == 'error':
@@ -476,7 +511,7 @@ with tab_run:
     progreso()
 
 # ---------------------------------------------------------------------------------------------- 3. alignment
-with tab_ali:
+if PAGINA == '3 · Check alignment':
     st.header('Check the alignment')
     fr = STACKS / 'resumen_stacks.csv'
     if not fr.exists():
@@ -512,7 +547,7 @@ with tab_ali:
             ref = int(r.loc[r.pos == pos_a, 'slice_referencia'].iloc[0]) if 'slice_referencia' in r else 1
             mt = stk.stat().st_mtime
             ver = st.multiselect('Frames to look at', g.slice.tolist(), default=mal.slice.tolist()[:6], key=f'ver_{pos_a}')
-            desc = leer_descartadas(STACKS); nuevo_desc = dict(desc); duenio = duenios_fluo(inv)
+            desc = leer_descartadas(STACKS); nuevo_desc = dict(desc)
             cols = st.columns(3)
             cols[0].image(miniatura(str(stk), mt, 420, ref - 1), caption=f'reference frame {ref}')
             for k, s in enumerate(ver):
@@ -522,12 +557,12 @@ with tab_ali:
                           caption=f'frame {s} · {x.hora} · quality {x.calidad:.2f}'
                                   + (f' · residual {x.residuo_px:.0f} px' if 'residuo_px' in x else ''))
                 fuera = col.checkbox('Leave out this image', value=x.archivo_BF in desc, key=f'ali_{x.archivo_BF}')
-                for a in [x.archivo_BF] + duenio.get(x.archivo_BF, []):
+                for a in [x.archivo_BF] + fluorescencias_de(x):
                     if fuera: nuevo_desc.setdefault(a, 'badly aligned (chosen in the interface)')
                     else: nuevo_desc.pop(a, None)
             if nuevo_desc != desc and st.button('Save the images to leave out', type='primary', key='guardar_ali'):
                 red = guardar_descartadas(STACKS, nuevo_desc)
-                st.success('Saved. ' + (f'Run step 1 again (tab 2): positions {", ".join(red)} will be redone, '
+                st.success('Saved. ' + (f'Run step 1 again (2 · Run): positions {", ".join(red)} will be redone, '
                                         'and the following steps after them.' if red else ''))
                 st.rerun()
             with st.expander(f'All frames of position {pos_a}'):
@@ -536,7 +571,7 @@ with tab_ali:
                 st.dataframe(g[show], width='stretch', hide_index=True)
 
 # ---------------------------------------------------------------------------------------------- 4. results
-with tab_res:
+if PAGINA == '4 · Results':
     st.header('Results')
     BF = {p.name.split('-')[0]: p for p in sorted(STACKS.glob('*-BF.tif'))}
     hechos = {p: r for p, r in BF.items() if (CANALES / f"{r.stem.replace('-BF', '')}_canales_BF_linaje_ciclos.csv").exists()}
@@ -605,7 +640,7 @@ with tab_res:
                 st.image(str(png), width='stretch')
 
 # ---------------------------------------------------------------------------------------------- help
-with tab_ayuda:
+if PAGINA == 'Help':
     st.header('How to use it')
     st.markdown('''
 1. **Choose the folder** with the images of one experiment (panel on the left). The images must be named

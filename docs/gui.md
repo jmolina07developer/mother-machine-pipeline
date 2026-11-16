@@ -35,12 +35,15 @@ From the scripts folder you can also start it with `streamlit run interfaz.py`.
 
 ## Using it
 
-**Panel on the left.** Choose the folder with the images of one experiment (**📂 Choose the images folder…**,
+**Panel on the left.** It has the pages of the interface (*Go to*: 1 · Images, 2 · Run, 3 · Check
+alignment, 4 · Results, Help). Choose the folder with the images of one experiment (**📂 Choose the images folder…**,
 or paste its path). The images must be named as the microscope saves them,
 `<position>_<yymmdd>_<hhmmss>_anything.tif`. The results go to the folder `Stacks` next to it. Write the
 names of the fluorescences, if there are any, from the brightest to the dimmest (e.g. `GFP, PI`).
 
-**1 · Images.** Number of images per position and a plot of the brightness of every image over time:
+**1 · Images.** The first time, the brightness of every image is measured (a progress bar shows it; about
+1 s per 100 images, kept in `Stacks/interfaz/medianas.csv` for the next times). Number of images per position
+and a plot of the brightness of every image over time:
 bright-field images are the brightest, and the fluorescence ones are told apart by brightness.
 
 - *Assign the fluorescence by time*: when two fluorescences are equally bright (e.g. GFP and PI), say which
@@ -65,7 +68,7 @@ stops immediately (the position that was half done is redone next time).
 **3 · Check alignment.** One row per position with the alignment quality (1 = perfect; below 0.8, look at
 it), the residual shift between consecutive frames (should be 0–1 px) and the rotation of the chip. For each
 position, the frames that may be badly aligned are shown next to the reference frame: if one shows another
-field of the chip or is out of focus, tick **Leave out this image** and save. Then run step 1 again (tab 2):
+field of the chip or is out of focus, tick **Leave out this image** and save. Then run step 1 again (2 · Run):
 only the positions with images left out are redone, followed by the next steps.
 
 **4 · Results.** A table per position (cells, divisions, cells that disappear inside the channel, valid
@@ -75,9 +78,9 @@ in their usual program: the stacks in Fiji, the Excel files, the table of all ce
 
 ## Correcting boxes
 
-Boxes are corrected in Fiji with the macro `Cajas_Canales.ijm` ([training.md](training.md)). In tab 4,
+Boxes are corrected in Fiji with the macro `Cajas_Canales.ijm` ([training.md](training.md)). In 4 · Results,
 **Open the straightened channels** opens the image the macro works on. After saving your corrections, run
-step 3 again in tab 2: the positions you corrected are redone with your boxes, followed by steps 4–7.
+step 3 again in 2 · Run: the positions you corrected are redone with your boxes, followed by steps 4–7.
 
 ## Files written by the interface
 
@@ -86,6 +89,7 @@ step 3 again in tab 2: the positions you corrected are redone with your boxes, f
 | `Stacks/canal_imagenes.csv` | channel of each image (`archivo, canal`), when assigned by time |
 | `Stacks/imagenes_descartadas.csv` | images left out (`archivo, motivo`) |
 | `Stacks/interfaz/ajustes_interfaz.json` | the settings of the interface for this experiment |
+| `Stacks/interfaz/medianas.csv` | brightness of every image, measured once |
 | `Stacks/interfaz/ajustes.json`, `estado.json`, `registro.txt` | settings, progress and messages of the last run |
 | `Stacks/interfaz/rehacer_stacks.txt`, `rehacer_pasos.json` | positions to redo in the next run |
 
@@ -94,8 +98,10 @@ settings file (see the top of that file).
 
 ## If something goes wrong
 
+- **After updating the pipeline**, close the small window and open the interface again, so that it uses the new
+  programs.
 - **The browser does not open:** open <http://localhost:8501> yourself while the small window is open.
 - **"Port 8501 is already in use":** the interface is already open (maybe in another browser window).
-- **A run stops with an error:** the messages are in tab 2 and in `Stacks/interfaz/registro.txt`.
+- **A run stops with an error:** the messages are in 2 · Run and in `Stacks/interfaz/registro.txt`.
 - **The installer fails:** check the internet connection and run it again; otherwise follow
   [INSTALL.md](../INSTALL.md).

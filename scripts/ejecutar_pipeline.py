@@ -30,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 PASOS = ['stacks', 'canales', 'celulas', 'cajas', 'resumen', 'excel', 'fluorescencia']
-NOMBRE_PASO = {'inventario': 'Reading the images', 'areas': 'Checking that every image belongs to its position',
+NOMBRE_PASO = {'inventario': 'Reading the images', 'areas': 'Checking that every image belongs to its position (a few minutes the first time)',
                'stacks': '1. Aligned stacks', 'canales': '2. Straightened channels', 'celulas': '3. Cells and lineage',
                'cajas': '4. Stacks with boxes', 'resumen': '5. Summary', 'excel': "6. Mothers' Excel files",
                'fluorescencia': '7. Fluorescence per cell'}
@@ -99,7 +99,11 @@ def ejecutar(cfg):
     # 1. stacks
     if pasos['stacks']:
         paso('inventario')
-        inv, umbral = GS.inventario(imagenes, fluos)
+        fm = stacks / 'interfaz' / 'medianas.csv'          # brightness already measured by the interface
+        med = dict(zip(*pd.read_csv(fm, dtype={'archivo': str})[['archivo', 'mediana']].values.T)) if fm.exists() else {}
+        inv, umbral = GS.inventario(imagenes, fluos, medianas=med,
+                                    progreso=lambda i, n: est.poner(paso='inventario', nombre_paso=NOMBRE_PASO['inventario'],
+                                                                    i=i, n=n, pos=''))
         inv = GS.aplicar_canales(inv, stacks)
         inv = GS.quitar_descartadas(inv, stacks)
         todas = sorted(inv.pos.unique()) if not posiciones else [p for p in posiciones if p in set(inv.pos)]

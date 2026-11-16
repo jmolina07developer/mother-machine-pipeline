@@ -83,21 +83,27 @@ AREA_SALTO_MAX = 6     # if it matches neither its own position nor the neighbou
                        # not searched: the numbers repeat in each lane (October/22: 05 and 15 show 0100–0115)
 
 
-def inventario(carpeta, fluos=('PI',)):
+def inventario(carpeta, fluos=('PI',), progreso=None, medianas=None):
     """One row per image: position, time, brightness (median) and channel (BF / PI). With several fluorescences
     (fluos = ('GFP', 'PI')), the fluorescence images are split among them by brightness (from brightest to
-    dimmest, in the given order)."""
+    dimmest, in the given order).
+    progreso(i, n): optional function called while the images are read (used by the interface).
+    medianas: optional {file name: median} already measured (the images in it are not read again)."""
     filas, vacias = [], []
-    for f in sorted(Path(carpeta).iterdir()):
+    fs = [f for f in sorted(Path(carpeta).iterdir()) if PATRON.match(f.name)]
+    for i, f in enumerate(fs):
         m = PATRON.match(f.name)
-        if not m:
-            continue
-        if f.stat().st_size == 0:
-            vacias.append(f.name); continue
-        img = tifffile.memmap(f)
+        if progreso is not None and i % 25 == 0:
+            progreso(i, len(fs))
+        med = medianas.get(f.name) if medianas else None
+        if med is None:
+            if f.stat().st_size == 0:
+                vacias.append(f.name); continue
+            img = tifffile.memmap(f)
+            med = float(np.median(img[::10, ::10]))
         filas.append(dict(pos=m.group(1),
                           hora=pd.to_datetime(m.group(2) + m.group(3), format='%y%m%d%H%M%S'),
-                          mediana=float(np.median(img[::10, ::10])), archivo=f.name))
+                          mediana=med, archivo=f.name))
     if vacias:
         print(f'WARNING: {len(vacias)} empty images (0 bytes) are ignored: {vacias[:5]}{" …" if len(vacias) > 5 else ""}')
     inv = pd.DataFrame(filas)
