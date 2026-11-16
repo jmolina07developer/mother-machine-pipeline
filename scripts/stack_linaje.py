@@ -1,5 +1,6 @@
 """
 Aligned stack with one box per cell (automatic lineage): each cell has its own colour and number
+The box is drawn as [ ] (CORCHETES): full sides and only short ticks at the top and bottom, so the septum stays visible.
 (the number is `celula` in <imagen>_linaje.csv and _linaje_ciclos.csv, unique within each channel).
 The daughters of a division get a new number and colour. The box of a cell whose lower edge is not
 tracked (the last one in the channel) is drawn dashed, down to where the cell is visible or to the exit.
@@ -28,6 +29,9 @@ import tifffile
 from PIL import Image, ImageDraw, ImageFont
 
 ANCHO_CAJA = 0.65      # box width relative to the width of the straightened channel crop
+CORCHETES = True       # each cell drawn as [ ]: full sides and only short ticks at the top and bottom, so that the
+                       # septum between two cells stays visible (False: the full box, as before)
+PATA = 0.25            # length of each top and bottom tick, relative to the width of the box
 TAM_LETRA = 13         # cell numbers
 TAM_CANAL = 16         # channel numbers, above each channel
 COMPRIMIR = True       # losslessly compressed TIFF (zlib): ~2.7 times less space. Open it in Fiji with
@@ -67,6 +71,22 @@ def discontinua(d, p, q, col, paso=4):
     for s in np.arange(0, L, 2 * paso):
         a = p + (q - p) * s / L; b = p + (q - p) * min(s + paso, L) / L
         d.line([tuple(a), tuple(b)], fill=col, width=1)
+
+
+def caja(d, pts, col, trazo=None, abajo=True):
+    """Box of a cell. pts: corners [top-left, top-right, bottom-right, bottom-left] (top = closed end of the
+    channel). With CORCHETES, drawn as [ ]: both sides in full and, at the top and bottom, only a short tick from
+    each corner, so that the septum is not covered. trazo: function drawing one segment (solid by default).
+    abajo=False: no bottom side (a cell leaving the channel)."""
+    trazo = trazo or (lambda p, q: d.line([tuple(p), tuple(q)], fill=col, width=1))
+    P = [np.array(x, float) for x in pts]
+    trazo(P[1], P[2]); trazo(P[3], P[0])                          # the sides
+    lados = [(P[0], P[1])] + ([(P[3], P[2])] if abajo else [])     # top and bottom
+    for a, b in lados:
+        if CORCHETES:
+            trazo(a, a + PATA * (b - a)); trazo(b, b + PATA * (a - b))
+        else:
+            trazo(a, b)
 
 
 def stack_linaje(stack, canales=None, salida=None, fotos=None):
@@ -118,17 +138,20 @@ def stack_linaje(stack, canales=None, salida=None, fotos=None):
                 pts, pt = esquinas(g, r.fila_sup, inf)
                 if not getattr(r, 'seguida', True):     # loose cell (seen by the network, not in the lineage): grey, dashed, no number
                     col = (200, 200, 200)
-                    for i in range(4): discontinua(d, pts[i], pts[(i + 1) % 4], col, paso=2)
+                    caja(d, pts, col, lambda p, q: discontinua(d, p, q, col, paso=2))
                     continue
                 if bool(getattr(r, 'interpolada', False)):  # image in which the network did not see it: filled-in, dotted box
-                    for i in range(4): discontinua(d, pts[i], pts[(i + 1) % 4], col, paso=2)
+                    caja(d, pts, col, lambda p, q: discontinua(d, p, q, col, paso=2))
                     d.text((pt[0], pt[1]), str(int(r.celula)), fill=col, font=letra, anchor='rm', stroke_width=1, stroke_fill=(0, 0, 0))
                     continue
                 if r.sale_del_canal:                      # exits the channel: open, dashed box
-                    d.line([pts[0], pts[1]], fill=col, width=1)
-                    discontinua(d, pts[1], pts[2], col); discontinua(d, pts[3], pts[0], col)
+                    caja(d, pts, col, lambda p, q: discontinua(d, p, q, col), abajo=False)
+                    trazo = lambda p, q: d.line([tuple(p), tuple(q)], fill=col, width=1)
+                    a, b = np.array(pts[0], float), np.array(pts[1], float)
+                    if CORCHETES: trazo(a, a + PATA * (b - a)); trazo(b, b + PATA * (a - b))
+                    else: trazo(a, b)
                 else:
-                    d.polygon(pts, outline=col)
+                    caja(d, pts, col)
                 d.text((pt[0], pt[1]), str(int(r.celula)), fill=col, font=letra, anchor='rm', stroke_width=1, stroke_fill=(0, 0, 0))
             for xy, txt in rotulos:
                 d.text(xy, txt, fill=(255, 255, 255), font=letra_canal, anchor='mb', stroke_width=2, stroke_fill=(0, 0, 0))

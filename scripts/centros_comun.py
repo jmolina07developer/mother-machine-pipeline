@@ -120,7 +120,13 @@ class DetectorCentros:
             x = np.stack([entrada(tiles, t, fila_fondo, fila_salida) for t in range(i, min(T, i + lote))])
             c, d, p = self.s.run(None, {'x': x})
             C.append(c[:, :L]); D.append(d[:, :, :L]); P.append(p[:, :L])
-        return np.concatenate(C), np.concatenate(D), np.concatenate(P)
+        C, D, P = np.concatenate(C), np.concatenate(D), np.concatenate(P)
+        # channel longer than the network input (LARGO): the extra rows (below the exit) are background
+        if L > C.shape[1]:
+            n = L - C.shape[1]
+            C = np.pad(C, ((0, 0), (0, n))); D = np.pad(D, ((0, 0), (0, 0), (0, n)))
+            P = np.concatenate([P, np.tile(np.array([1, 0, 0, 0], P.dtype), (P.shape[0], n, 1))], axis=1)
+        return C, D, P
 
     def cajas(self, tiles, L, fila_fondo, fila_salida, umbral=UMBRAL_CENTRO):
         """Boxes of each image: list (one per image) of [(fila_sup, fila_inf, confianza)], in the

@@ -185,6 +185,9 @@ python stack_linaje.py /path/to/MyExperiment/Stacks/04-26092025-BF.tif [--fotos 
 cell. The number is `celula` in the tables, unique within each channel; daughters get new numbers and
 colours. In the boxes:
 
+- each cell is drawn as [ ]: the sides in full and only short ticks at the top and bottom, so that the
+  line between two cells (the septum) is not covered and you can see whether a cell has divided
+  (`CORCHETES = False` at the top of `stack_linaje.py` draws full boxes);
 - dashed boxes are cells reaching the exit;
 - dotted boxes are frames in which the network missed the cell and the tracking filled it in.
 
