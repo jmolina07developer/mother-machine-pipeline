@@ -366,6 +366,8 @@ def emparejar(inv_pos, max_seg=MAX_SEGUNDOS, fluos=('PI',)):
         con_fluo = np.column_stack([P[f'archivo_{f}'] != '' for f in fluos]).any(1)
         P, extra = _descartar_extra(P, con_fluo)
         return P, sobr_tot, rep_tot + extra
+    # a single fluorescence: whatever its name (PI, GFP… e.g. in canal_imagenes.csv), here it is 'PI'
+    inv_pos = inv_pos.assign(canal=np.where(inv_pos.canal == 'BF', 'BF', 'PI'))
     P, sobr, rep_ = _emparejar_uno(inv_pos, max_seg)
     return P, sobr, quitadas + rep_
 

@@ -647,6 +647,7 @@ PRM_GLOBAL = dict(
                           # passes over other boxes (a lone cell in an almost empty channel can move up further)
     sube_min=4, sube_max=40, sube_mejora=4.0,    # collective upward shift of the channel contents (px, px, improvement in px per box)
     tiempo_max=60.0,      # s per segment (HiGHS)
+    tiempo_total=None,    # s in total per channel: after this, no more crossing rounds or 2nd pass (None = no limit)
 )
 
 
@@ -975,6 +976,7 @@ def seguir_cajas_global(cajas, tiempo, fila_fondo, fila_salida, mu=None, malas=(
     Ls = [b - a for t in ok for a, b, _ in cajas[t] if a < fs - 1 and b < fs - 1.5]
     L0tip = float(np.percentile(Ls, 25)) if len(Ls) > 10 else 20.0
     filas, celdas = [], []; sig = [1]; t0 = _time.time(); nvar = 0; dudas = []
+    agotado = lambda: bool(p.get('tiempo_total')) and _time.time() - t0 > p['tiempo_total']
     for it_tr, fotos in enumerate(tramos):
         ultimo_tramo = it_tr == len(tramos) - 1
         Tr = _Tramo(fotos, cajas, tiempo, float(fila_fondo), fs, p, manuales)
@@ -985,10 +987,11 @@ def seguir_cajas_global(cajas, tiempo, fila_fondo, fila_salida, mu=None, malas=(
             for _ in range(p["max_vueltas_cruces"]):          # crossings: they are added and the problem is solved again
                 var, x, res = _resolver(Tr, alfa_nodo, alfa_det, L0tip, mu, p, cr)
                 nuevos = _cruces(Tr, var, x)
-                if not nuevos: break
+                if not nuevos or agotado(): break
                 cr = cr + nuevos
             nvar = max(nvar, len(var))
             pistas = _pistas(Tr, var, x)
+            if agotado(): break                                # time budget per channel spent: keep the current solution
             if it == 0:                                        # each cell's own rate, for the 2nd pass
                 for pi in pistas:
                     ks = [Tr.nodos[n]['k'] for n in pi['nodos']]
@@ -1008,7 +1011,7 @@ def seguir_cajas_global(cajas, tiempo, fila_fondo, fila_salida, mu=None, malas=(
             elif tipo == 'z' and Tr.nodos[dat].get('union'):
                 dudas.append((Tr.fotos[Tr.nodos[dat]['k']] + 1, 3, 'la red parte una célula en dos'))
     if info is not None:
-        info.update(segundos=_time.time() - t0, variables=nvar, dudas=dudas)
+        info.update(segundos=_time.time() - t0, variables=nvar, dudas=dudas, tiempo_agotado=agotado())
     F = pd.DataFrame(filas, columns=['foto', 'celula', 'fila_sup', 'fila_inf', 'longitud_px', 'sale_del_canal', 'saltada',
                                      'fila_inf_visible', 'confianza', 'visible', 'seguida', 'interpolada', 'manual'])
     if len(F):
